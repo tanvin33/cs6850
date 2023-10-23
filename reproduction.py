@@ -49,33 +49,62 @@ def reproduction_pq(p, q, Zc, Zt, k):
 
         num_infected = len(stable_nodes)
 
+    return_code = -1
     if num_infected >= Zc:
         print("Infection Not Contained " + str(num_infected))
+        return_code = 0
     elif G.number_of_nodes() > Zt:
         print("NOT converged")
+        return_code = 1
     else:
         print("Infection Contained " + str(num_infected))
+        return_code = 2
 
-    color_map = []
-    for node in G.nodes():
-        if node in stable_nodes:
-            color_map.append("red")
-        elif node in uninfected_nodes:
-            color_map.append("green")
-        else:
-            color_map.append("blue")
+    # color_map = []
+    # for node in G.nodes():
+    #     if node in stable_nodes:
+    #         color_map.append("red")
+    #     elif node in uninfected_nodes:
+    #         color_map.append("green")
+    #     else:
+    #         color_map.append("blue")
 
-    return G, color_map
+    #    return G, color_map, return_code
+
+    return return_code
 
 
 if __name__ == "__main__":
-    p = 0.7
-    q = 1
+    # p = 0.7
+    # q = 1
     Zt = 1000
     Zc = 10
     k = 2  # time at which contact tracing begins
 
-    G, color_map = reproduction_pq(p, q, Zc, Zt, k)
-    pos = graphviz_layout(G, prog="dot")
-    nx.draw(G, pos, with_labels=False, node_color=color_map)
+    # G, color_map = reproduction_pq(p, q, Zc, Zt, k)
+    # pos = graphviz_layout(G, prog="dot")
+    # nx.draw(G, pos, with_labels=False, node_color=color_map)
+    # plt.show()
+
+    result = np.zeros((101, 101))
+
+    # ascending time
+    for p in range(0, 101):
+        for q in range(0, 101):
+            num_contained = 0
+            for i in range(100):
+                return_code = reproduction_pq(p / 100.0, q / 100.0, Zc, Zt, k)
+                if return_code == 2:
+                    num_contained += 1
+            result[p, q] = num_contained / 100.0
+
+    fig, ax = plt.subplots()
+    # im, cbar = heatmap(result, ax=ax, cmap="YlGn", cbarlabel="result")
+    ax.set(xlim=(0, 100), ylim=(0, 100))
+
+    im = ax.imshow(result, cmap="YlGn", interpolation="nearest")
+    cbar = ax.figure.colorbar(im, ax=ax)
     plt.show()
+
+    # fig.tight_layout()
+    # plt.show()
