@@ -18,6 +18,7 @@ def reproduction_pq(p, q, r, Zc, Zt, k):
     frontier_nodes.append(initial_node)
     stable_nodes = []
     uninfected_nodes = []
+    infected_nodes = []
     id = 1
 
     # while len(frontier_nodes) > 0 and G.number_of_nodes() <= Zt and num_infected < Zc:
@@ -61,29 +62,49 @@ def reproduction_pq(p, q, r, Zc, Zt, k):
 
         if t >= k:  # start contact tracing
             new_frontier = []
+            #print(frontier_nodes)
 
             for queried_node in frontier_nodes:
+                #print(queried_node)
                 paths = nx.shortest_path_length(G, initial_node)
                 depth = paths[queried_node]
                 probability = p**depth
                 is_infected = np.random.randint(101) / 100 <= probability
-                test_self = np.random.randint(101) / 100 <= r # probability queried_node tests itself
+                test_self = np.random.randint(101) / 100 <= r # probability queried_node tests itself, should it vary with time?
 
-                if is_infected:
-                    if test_self: # if test, contact trace by adding contacts to frontier
-                        if queried_node in active_nodes:
-                            active_nodes.remove(queried_node) # remove from active nodes
+                # if is_infected:
+                #     if test_self: # if test, contact trace by adding contacts to frontier
+                #         # idk if we should add a test self option for if not infected (idt it would change anything tho)
+                #         if queried_node in active_nodes:
+                #             active_nodes.remove(queried_node) # remove from active nodes
+                #         stable_nodes.append(queried_node)
+                #         for neighbor in G.neighbors(queried_node):
+                #             new_frontier.append(neighbor)
+                #     else:
+                #         new_frontier.append(queried_node) # hasn't tested, gets another try to test at next time step
+                # elif not is_infected:
+                #     uninfected_nodes.append(queried_node)
+
+
+                if test_self:
+                    if is_infected:
+                        active_nodes.remove(queried_node)
                         stable_nodes.append(queried_node)
+                        if queried_node in infected_nodes:
+                            infected_nodes.remove(queried_node)
                         for neighbor in G.neighbors(queried_node):
                             new_frontier.append(neighbor)
-                    else:
-                        new_frontier.append(queried_node) # hasn't tested, gets another try to test at next time step
-                elif not is_infected:
-                    uninfected_nodes.append(queried_node)
-            
+                    
+                    if not is_infected:
+                        uninfected_nodes.append(queried_node)
+                else:
+                    if is_infected:
+                        infected_nodes.append(queried_node)
+                    new_frontier.append(queried_node)
+
             frontier_nodes = new_frontier
 
-        num_infected = len(stable_nodes)
+        num_infected = len(infected_nodes)
 
     return_code = -1
     if num_infected >= Zc:
@@ -111,9 +132,9 @@ def reproduction_pq(p, q, r, Zc, Zt, k):
 
 
 if __name__ == "__main__":
-    p = 0.8
+    p = 0.9
     q = 1
-    r = 0.5
+    r = 1
     Zt = 1000
     Zc = 10
     k = 4  # time at which contact tracing begins
