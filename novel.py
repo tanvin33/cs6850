@@ -4,7 +4,7 @@ import numpy as np
 from networkx.drawing.nx_agraph import graphviz_layout
 
 
-def novel_model(
+def self_testing_model(
     p,
     q,
     r,
@@ -12,29 +12,41 @@ def novel_model(
     Zt,
     k,
 ):
+    # assert pre-conditions
     assert 0 <= p <= 1
     assert 0 <= q <= 1
+    assert 0 <= r <= 1
+
+    # initialize graph
     G = nx.DiGraph()
+
+    # initialize key variables
     num_infected = 0
-    t = 0
-    initial_node = ("Root", t)
-    G.add_node(initial_node)
-    active_nodes = []
-    active_nodes.append(initial_node)
-    frontier_nodes = []
-    frontier_nodes.append(initial_node)
-    stable_nodes = []
-    uninfected_nodes = []
+    t = 0  # time / infection round
+    id = 1  # nodeID counter
+
+    # initialize key lists
+    active_nodes = []  # list of nodes still generating new contacts
+    frontier_nodes = []  # list of nodes who know they are possibly infected
+    stable_nodes = []  # nodes that were infected, tested positive, "quarantined"
+    uninfected_nodes = []  # nodes that tested negative, any children are not relevant
+    active_infected_nodes = []  # nodes still generating contacts, but are infected
+
+    # initialize root, and determine its infection status
+    root = ("Root", t)
+    G.add_node(root)
+    active_nodes.append(root)
+    frontier_nodes.append(root)
     root_infected = np.random.randint(101) / 100 <= p
-    print(root_infected)
-    active_infected_nodes = []
     if root_infected:
-        active_infected_nodes.append(initial_node)
-    id = 1
+        active_infected_nodes.append(root)
+
+    # contagion process
     while len(frontier_nodes) > 0 and G.number_of_nodes() <= Zt and num_infected < Zc:
         t += 1
+
+        # in each round, any active nodes will generate new contacts, or "children" with probability q
         for i in range(len(active_nodes)):
-            # first generate children
             generate_new = np.random.randint(101) / 100
             if generate_new <= q:
                 parent = active_nodes[i]
@@ -43,36 +55,49 @@ def novel_model(
                 G.add_node(child)
                 G.add_edge(parent, child)
                 active_nodes.append(child)
-                paths = nx.shortest_path_length(G, initial_node)
+
+                # determine if each node created will be infected in advance.
+                # this is not how we think of the contagion process working, but
+                # it allows us to easily code using principle of deffered decisions
+                paths = nx.shortest_path_length(G, root)
                 depth = paths[parent]
                 probability = p**depth
                 is_infected = np.random.randint(101) / 100 <= probability
-                if is_infected and parent in active_infected_nodes:
+                # a node is only infected if its parent is infected
+                if parent in active_infected_nodes and is_infected:
                     active_infected_nodes.append(child)
 
-        if t >= k:  # start contact tracing
-            # print(frontier_nodes)
-            # paths = nx.shortest_path_length(G, initial_node)
+        # if we are past time k, do one step of the contact tracing process
+        if t >= k:
             for node in frontier_nodes:
                 does_test = np.random.randint(101) / 100 <= r
+                # nothing happens if the node does not choose to test itself
                 if does_test:
-                    # depth = paths[node]
-                    # probability = p**depth
-                    # is_infected = np.random.randint(101) / 100 <= probability
-                    if node in active_infected_nodes:
+                    if node in active_infected_nodes:  # if infected (pre-determined)
+                        # first, the node is stabilized
                         active_nodes.remove(node)
-                        frontier_nodes.remove(node)
                         active_infected_nodes.remove(node)
                         stable_nodes.append(node)
+
+                        # it is removed from the frontier
+                        frontier_nodes.remove(node)
+
+                        # and all of its children get added to the frontier
                         for neighbor in G.neighbors(node):
                             frontier_nodes.append(neighbor)
-                        # frontier_nodes.sort(key=lambda x: x[1])
-                    else:
+
+                    else:  # if not infected
+                        # otherwise, it is removed from the frontier,
+                        # marked as unifected,
+                        # and no longer active (technically still generates new contacts, but we are not interested in taht)
                         frontier_nodes.remove(node)
                         uninfected_nodes.append(node)
+                        active_infected_nodes.remove(node)
 
+        # after a round, calculate num_infected, to check contagion stopping condition
         num_infected = len(active_infected_nodes)
 
+    # print the contagion result
     return_code = -1
     if len(frontier_nodes) == 0:
         print("Infection Contained " + str(num_infected))
@@ -84,103 +109,30 @@ def novel_model(
         print("NOT converged")
         return_code = 1
 
+    # create color map for plotting this graph
     color_map = []
     for node in G.nodes():
         if node in stable_nodes:
-            color_map.append("red")
+            color_map.append("orange")
         elif node in uninfected_nodes:
             color_map.append("green")
+        elif node in active_infected_nodes:
+            color_map.append("red")
         else:
             color_map.append("blue")
 
-    return (
-        G,
-        color_map,
-    )
-
-
-#    return G, color_map, returncode
+    return (G, color_map)
 
 
 if __name__ == "__main__":
     p = 0.9
     q = 1
-    r = 1
+    r = 0.8
     Zt = 1000
     Zc = 10
     k = 2  # time at which contact tracing begins
 
-    G, color_map = novel_model(p, q, r, Zc, Zt, k)
+    G, color_map = self_testing_model(p, q, r, Zc, Zt, k)
     pos = graphviz_layout(G, prog="dot")
     nx.draw(G, pos, with_labels=False, node_color=color_map)
     plt.show()
-
-    # result = np.zeros((101, 101))
-
-    # # ascending time
-    # for p in range(0, 101):
-    #     for q in range(0, 101):
-    #         num_contained = 0
-    #         for i in range(100):
-    #             return_code = reproduction_pq(p / 100.0, q / 100.0, Zc, Zt, k, 0)
-    #             if return_code == 2:
-    #                 num_contained += 1
-    #         result[p, q] = num_contained / 100.0
-
-    # fig, ax = plt.subplots()
-    # # im, cbar = heatmap(result, ax=ax, cmap="YlGn", cbarlabel="result")
-    # ax.set(xlim=(0, 100), ylim=(0, 100))
-    # ax.set_xticklabels([x / 100 for x in range(0, 101, 20)])
-    # ax.set_yticklabels([y / 100 for y in range(0, 101, 20)])
-    # im = ax.imshow(result, cmap="YlOrRd", interpolation="nearest")
-    # cbar = ax.figure.colorbar(im, ax=ax)
-    # plt.savefig("ascending_time.png")
-
-    # # DESCENDING TIME
-    # result2 = np.zeros((101, 101))
-    # for p in range(0, 101):
-    #     for q in range(0, 101):
-    #         num_contained = 0
-    #         for i in range(100):
-    #             return_code = reproduction_pq(p / 100.0, q / 100.0, Zc, Zt, k, -1)
-    #             if return_code == 2:
-    #                 num_contained += 1
-    #         result2[p, q] = num_contained / 100.0
-
-    # fig, ax = plt.subplots()
-    # # im, cbar = heatmap(result, ax=ax, cmap="YlGn", cbarlabel="result")
-    # ax.set(xlim=(0, 100), ylim=(0, 100))
-    # ax.set_xticklabels([x / 100 for x in range(0, 101, 20)])
-    # ax.set_yticklabels([y / 100 for y in range(0, 101, 20)])
-    # im = ax.imshow(result2, cmap="YlOrRd", interpolation="nearest")
-    # cbar = ax.figure.colorbar(im, ax=ax)
-
-    # plt.savefig("descending_time.png")
-
-    # Difference
-    # result2 = np.zeros((101, 101))
-    # for p in range(0, 101):
-    #     for q in range(0, 101):
-    #         num_contained = 0
-    #         num_contained_d = 0
-    #         for i in range(100):
-    #             ascending_code = novel_model(p / 100.0, q / 100.0, r, Zc, Zt, k, 0)
-    #             if ascending_code == 2:
-    #                 num_contained += 1
-    #             descending_code = novel_model(p / 100.0, q / 100.0, r, Zc, Zt, k, -1)
-    #             if descending_code == 2:
-    #                 num_contained_d += 1
-    #         result2[p, q] = num_contained / 100.0 - num_contained_d / 100.0
-
-    # fig, ax = plt.subplots()
-    # # im, cbar = heatmap(result, ax=ax, cmap="YlGn", cbarlabel="result")
-    # ax.set(xlim=(0, 100), ylim=(0, 100))
-    # ax.set_xticklabels([x / 100 for x in range(0, 101, 20)])
-    # ax.set_yticklabels([y / 100 for y in range(0, 101, 20)])
-    # im = ax.imshow(result2, cmap="YlOrRd", interpolation="nearest")
-    # cbar = ax.figure.colorbar(im, ax=ax)
-
-    # plt.savefig("difference_asc_desc.png")
-
-    # fig.tight_layout()
-    # plt.show()
