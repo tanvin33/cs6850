@@ -25,6 +25,11 @@ def novel_model(
     frontier_nodes.append(initial_node)
     stable_nodes = []
     uninfected_nodes = []
+    root_infected = np.random.randint(101) / 100 <= p
+    print(root_infected)
+    active_infected_nodes = []
+    if root_infected:
+        active_infected_nodes.append(initial_node)
     id = 1
     while len(frontier_nodes) > 0 and G.number_of_nodes() <= Zt and num_infected < Zc:
         t += 1
@@ -32,25 +37,32 @@ def novel_model(
             # first generate children
             generate_new = np.random.randint(101) / 100
             if generate_new <= q:
-                node = active_nodes[i]
+                parent = active_nodes[i]
                 child = ("Node" + str(id), t)
                 id += 1
                 G.add_node(child)
-                G.add_edge(node, child)
+                G.add_edge(parent, child)
                 active_nodes.append(child)
+                paths = nx.shortest_path_length(G, initial_node)
+                depth = paths[parent]
+                probability = p**depth
+                is_infected = np.random.randint(101) / 100 <= probability
+                if is_infected and parent in active_infected_nodes:
+                    active_infected_nodes.append(child)
 
         if t >= k:  # start contact tracing
             # print(frontier_nodes)
-            paths = nx.shortest_path_length(G, initial_node)
+            # paths = nx.shortest_path_length(G, initial_node)
             for node in frontier_nodes:
                 does_test = np.random.randint(101) / 100 <= r
                 if does_test:
-                    depth = paths[node]
-                    probability = p**depth
-                    is_infected = np.random.randint(101) / 100 <= probability
-                    if is_infected:
+                    # depth = paths[node]
+                    # probability = p**depth
+                    # is_infected = np.random.randint(101) / 100 <= probability
+                    if node in active_infected_nodes:
                         active_nodes.remove(node)
                         frontier_nodes.remove(node)
+                        active_infected_nodes.remove(node)
                         stable_nodes.append(node)
                         for neighbor in G.neighbors(node):
                             frontier_nodes.append(neighbor)
@@ -59,18 +71,18 @@ def novel_model(
                         frontier_nodes.remove(node)
                         uninfected_nodes.append(node)
 
-        num_infected = len(stable_nodes)
+        num_infected = len(active_infected_nodes)
 
     return_code = -1
-    if num_infected >= Zc:
+    if len(frontier_nodes) == 0:
+        print("Infection Contained " + str(num_infected))
+        return_code = 2
+    elif num_infected >= Zc:
         print("Infection Not Contained " + str(num_infected))
         return_code = 0
     elif G.number_of_nodes() > Zt:
         print("NOT converged")
         return_code = 1
-    else:
-        print("Infection Contained " + str(num_infected))
-        return_code = 2
 
     color_map = []
     for node in G.nodes():
@@ -91,9 +103,9 @@ def novel_model(
 
 
 if __name__ == "__main__":
-    p = 0.7
+    p = 0.9
     q = 1
-    r = 0.67
+    r = 1
     Zt = 1000
     Zc = 10
     k = 2  # time at which contact tracing begins
