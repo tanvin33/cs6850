@@ -32,6 +32,9 @@ def self_testing_model(
     uninfected_nodes = []  # nodes that tested negative, any children are not relevant
     active_infected_nodes = []  # nodes still generating contacts, but are infected
 
+    # keep track of max number of infected nodes
+    # max_infected = 0
+
     # initialize root, and determine its infection status
     root = ("Root", t)
     G.add_node(root)
@@ -40,6 +43,7 @@ def self_testing_model(
     root_infected = np.random.randint(101) / 100 <= p
     if root_infected:
         active_infected_nodes.append(root)
+        # max_infected = 1
 
     # contagion process
     while len(frontier_nodes) > 0 and G.number_of_nodes() <= Zt and num_infected < Zc:
@@ -66,6 +70,7 @@ def self_testing_model(
                 # a node is only infected if its parent is infected
                 if parent in active_infected_nodes and is_infected:
                     active_infected_nodes.append(child)
+                    # max_infected += 1
 
         # if we are past time k, do one step of the contact tracing process
         if t >= k:
@@ -121,6 +126,7 @@ def self_testing_model(
         else:
             color_map.append("blue")
 
+    # return (G, color_map, max_infected)
     return (G, color_map)
 
 
@@ -128,11 +134,18 @@ if __name__ == "__main__":
     p = 0.9
     q = 1
     r = 0.8
-    Zt = 1000
-    Zc = 10
+    Zt = 1500
+    Zc = 30
     k = 2  # time at which contact tracing begins
 
     G, color_map = self_testing_model(p, q, r, Zc, Zt, k)
     pos = graphviz_layout(G, prog="dot")
     nx.draw(G, pos, with_labels=False, node_color=color_map)
     plt.show()
+    
+    # sum_max_infected = 0
+    # for i in range(0, 1001):
+    #     G, color_map, max_infected = self_testing_model(p, q, r, Zc, Zt, k)
+    #     sum_max_infected += max_infected
+    # print(sum_max_infected / 1000.0)
+
