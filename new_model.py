@@ -62,7 +62,7 @@ def self_testing_model(
 
                 # determine if each node created will be infected in advance.
                 # this is not how we think of the contagion process working, but
-                # it allows us to easily code using principle of deffered decisions
+                # it allows us to easily code using principle of deferred decisions
                 paths = nx.shortest_path_length(G, root)
                 depth = paths[parent]
                 probability = p**depth
@@ -93,8 +93,8 @@ def self_testing_model(
 
                     else:  # if not infected
                         # otherwise, it is removed from the frontier,
-                        # marked as unifected,
-                        # and no longer active (technically still generates new contacts, but we are not interested in taht)
+                        # marked as uninfected,
+                        # and no longer active (technically still generates new contacts, but we are not interested in them)
                         frontier_nodes.remove(node)
                         uninfected_nodes.append(node)
                         active_infected_nodes.remove(node)
@@ -131,18 +131,36 @@ def self_testing_model(
 
 
 if __name__ == "__main__":
-    p = 0.9
+    p = np.random.randint(101) / 100.0
     q = 1
     r = 0.8
     Zt = 1500
     Zc = 30
     k = 2  # time at which contact tracing begins
 
-    G, color_map = self_testing_model(p, q, r, Zc, Zt, k)
-    pos = graphviz_layout(G, prog="dot")
-    nx.draw(G, pos, with_labels=False, node_color=color_map)
+    # G, color_map = self_testing_model(p, q, r, Zc, Zt, k)
+    # pos = graphviz_layout(G, prog="dot")
+    # nx.draw(G, pos, with_labels=False, node_color=color_map)
+    # plt.show()
+
+    # creating observed probability of containment graph
+    result = np.zeros((101, 101))
+
+    for p1 in range(0, 101):
+        for r1 in range(0, 101):
+            num_contained = 0
+            for i in range(100):
+                return_code = self_testing_model(p1 / 100.0, q, r1 / 100.0, Zc, Zt, k)
+                if return_code == 2:
+                    num_contained += 1
+            result[p1, r1] = num_contained / 100.0
+
+    fig, ax = plt.subplots()
+    ax.set(xlim=(0, 100), ylim=(0, 100))
+    im = ax.imshow(result, cmap="YlGn", interpolation="nearest")
+    cbar = ax.figure.colorbar(im, ax=ax)
     plt.show()
-    
+
     # sum_max_infected = 0
     # for i in range(0, 1001):
     #     G, color_map, max_infected = self_testing_model(p, q, r, Zc, Zt, k)
