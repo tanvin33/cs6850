@@ -97,7 +97,7 @@ def self_testing_model(
                         # and no longer active (technically still generates new contacts, but we are not interested in them)
                         frontier_nodes.remove(node)
                         uninfected_nodes.append(node)
-                        active_infected_nodes.remove(node)
+                        active_nodes.remove(node)
 
         # after a round, calculate num_infected, to check contagion stopping condition
         num_infected = len(active_infected_nodes)
@@ -127,7 +127,7 @@ def self_testing_model(
             color_map.append("blue")
 
     # return (G, color_map, max_infected)
-    return (G, color_map)
+    return (G, color_map, return_code)
 
 
 if __name__ == "__main__":
