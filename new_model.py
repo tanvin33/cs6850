@@ -28,11 +28,12 @@ def self_testing_model(
     active_infected_nodes = []  # nodes still generating contacts, but are infected
 
    # initialize root, and determine its infection status
-    root = ("Root", t, 1)
-    G.add_node(root, p=np.random.randint(101) / 100, r=np.random.randint(101) / 100)
+    root = ("Root", t)
+    G.add_node(root, notified="False")
     active_nodes.append(root)
     frontier_nodes.append(root)
-    root_infected = np.random.randint(101) / 100 <= G.nodes[root][p]
+    p = np.random.randint(101) / 100
+    root_infected = np.random.randint(101) / 100 <= p
     if root_infected:
         active_infected_nodes.append(root)
         # max_infected = 1
@@ -48,7 +49,7 @@ def self_testing_model(
                 parent = active_nodes[i]
                 child = ("Node" + str(id), t)
                 id += 1
-                G.add_node(child, p=np.random.randint(101) / 100, r=np.random.randint(101) / 100)
+                G.add_node(child, notified="False")
                 G.add_edge(parent, child)
                 active_nodes.append(child)
 
@@ -57,7 +58,7 @@ def self_testing_model(
                 # it allows us to easily code using principle of deferred decisions
                 paths = nx.shortest_path_length(G, root)
                 depth = paths[parent]
-                probability = G.nodes[child][p]
+                probability = np.random.randint(101) / 100
                 is_infected = np.random.randint(101) / 100 <= probability
                 # a node is only infected if its parent is infected
                 if parent in active_infected_nodes and is_infected:
@@ -67,7 +68,8 @@ def self_testing_model(
         # if we are past time k, do one step of the contact tracing process
         if t >= k:
             for node in frontier_nodes:
-                does_test = np.random.randint(101) / 100 <= G.nodes[node][r]
+                r = np.random.randint(101) / 100
+                does_test = np.random.randint(101) / 100 <= r
                 # nothing happens if the node does not choose to test itself
                 if does_test:
                     if node in active_infected_nodes:  # if infected (pre-determined)
@@ -255,28 +257,28 @@ if __name__ == "__main__":
     Zc = 30
     k = 2  # time at which contact tracing begins
 
-    # G, color_map = self_testing_model(p, q, r, Zc, Zt, k)
-    # pos = graphviz_layout(G, prog="dot")
-    # nx.draw(G, pos, with_labels=False, node_color=color_map)
-    # plt.show()
+    G, color_map, return_code = self_testing_model(q, Zc, Zt, k)
+    pos = graphviz_layout(G, prog="dot")
+    nx.draw(G, pos, with_labels=False, node_color=color_map)
+    plt.show()
 
     # creating observed probability of containment graph
     result = np.zeros((101, 101))
 
-    for p1 in range(0, 101):
-        for r1 in range(0, 101):
-            num_contained = 0
-            for i in range(100):
-                G, color_map, return_code = self_testing_model_constant(p1 / 100.0, q, r1 / 100.0, Zc, Zt, k)
-                if return_code == 2:
-                    num_contained += 1
-            result[p1, r1] = num_contained / 100.0
+    # for p1 in range(0, 101):
+    #     for r1 in range(0, 101):
+    #         num_contained = 0
+    #         for i in range(10):
+    #             G, color_map, return_code = self_testing_model_constant(p1 / 100.0, q, r1 / 100.0, Zc, Zt, k)
+    #             if return_code == 2:
+    #                 num_contained += 1
+    #         result[p1, r1] = num_contained / 100.0
 
-    fig, ax = plt.subplots()
-    ax.set(xlim=(0, 100), ylim=(0, 100))
-    im = ax.imshow(result, cmap="YlGn", interpolation="nearest")
-    cbar = ax.figure.colorbar(im, ax=ax)
-    plt.show()
+    # fig, ax = plt.subplots()
+    # ax.set(xlim=(0, 100), ylim=(0, 100))
+    # im = ax.imshow(result, cmap="YlGn", interpolation="nearest")
+    # cbar = ax.figure.colorbar(im, ax=ax)
+    # plt.show()
 
     # sum_max_infected = 0
     # for i in range(0, 1001):
