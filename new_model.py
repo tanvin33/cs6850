@@ -92,7 +92,7 @@ def self_testing_model(
                         # and no longer active (technically still generates new contacts, but we are not interested in taht)
                         frontier_nodes.remove(node)
                         uninfected_nodes.append(node)
-                        active_infected_nodes.remove(node)
+                        active_nodes.remove(node)
 
         # after a round, calculate num_infected, to check contagion stopping condition
         num_infected = len(active_infected_nodes)
@@ -125,9 +125,9 @@ def self_testing_model(
 
 
 if __name__ == "__main__":
-    p = 0.9
+    p = 0.5
     q = 1
-    r = 0.8
+    r = 0.7
     Zt = 1000
     Zc = 10
     k = 2  # time at which contact tracing begins
