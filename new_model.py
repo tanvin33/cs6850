@@ -28,7 +28,7 @@ def self_testing_model(
     p = np.random.randint(101) / 100
     q = np.random.randint(101) / 100
     r = np.random.randint(101) / 100
-    G.add_node(root, notified=False, p=p, q=q, r=r)
+    G.add_node(root, p=p, q=q, r=r)
     active_nodes.append(0)
     frontier_nodes.append(0)
     root_infected = np.random.randint(101) / 100 <= G.nodes[root]['p']
@@ -50,7 +50,7 @@ def self_testing_model(
                 p = np.random.randint(101) / 100
                 q = np.random.randint(101) / 100
                 r = np.random.randint(101) / 100
-                G.add_node(child, notified=False, p=p, q=q, r=r)
+                G.add_node(child, p=p, q=q, r=r)
                 G.add_edge(parent, child)
                 active_nodes.append(child)
 
@@ -66,8 +66,6 @@ def self_testing_model(
         # if we are past time k, do one step of the contact tracing process
         if t >= k:
             for node in frontier_nodes:
-                if G.nodes[node]['notified']:
-                    G.nodes[node]['r'] = 0.75
                 does_test = np.random.randint(101) / 100 <= G.nodes[node]['r']
                 # nothing happens if the node does not choose to test itself
                 if does_test:
@@ -80,10 +78,9 @@ def self_testing_model(
                         # it is removed from the frontier
                         frontier_nodes.remove(node)
 
-                        # and all of its children get added to the frontier and are notified their parent node is infected
+                        # and all of its children get added to the frontier
                         for neighbor in G.neighbors(node):
                             frontier_nodes.append(neighbor)
-                            G.nodes[neighbor]['notified'] = True
 
                     else:  # if not infected
                         # otherwise, it is removed from the frontier,
