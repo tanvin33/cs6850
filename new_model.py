@@ -4,14 +4,10 @@ import numpy as np
 from networkx.drawing.nx_agraph import graphviz_layout
 
 def self_testing_model(
-    q,
     Zc,
     Zt,
     k
 ):
-    # assert pre-condition
-    assert 0 <= q <= 1
-
     # initialize graph
     G = nx.DiGraph()
 
@@ -28,14 +24,16 @@ def self_testing_model(
     active_infected_nodes = []  # nodes still generating contacts, but are infected
 
    # initialize root, and determine its infection status
-    root = ("Root", t)
-    G.add_node(root, notified="False")
-    active_nodes.append(root)
-    frontier_nodes.append(root)
+    root = 0
     p = np.random.randint(101) / 100
-    root_infected = np.random.randint(101) / 100 <= p
+    q = np.random.randint(101) / 100
+    r = np.random.randint(101) / 100
+    G.add_node(root, notified=False, p=p, q=q, r=r)
+    active_nodes.append(0)
+    frontier_nodes.append(0)
+    root_infected = np.random.randint(101) / 100 <= G.nodes[root]['p']
     if root_infected:
-        active_infected_nodes.append(root)
+        active_infected_nodes.append(0)
         # max_infected = 1
 
     # contagion process
@@ -45,21 +43,21 @@ def self_testing_model(
         # in each round, any active nodes will generate new contacts, or "children" with probability q
         for i in range(len(active_nodes)):
             generate_new = np.random.randint(101) / 100
-            if generate_new <= q:
+            if generate_new <= G.nodes[i]['q']:
                 parent = active_nodes[i]
-                child = ("Node" + str(id), t)
+                child = id
                 id += 1
-                G.add_node(child, notified="False")
+                p = np.random.randint(101) / 100
+                q = np.random.randint(101) / 100
+                r = np.random.randint(101) / 100
+                G.add_node(child, notified=False, p=p, q=q, r=r)
                 G.add_edge(parent, child)
                 active_nodes.append(child)
 
                 # determine if each node created will be infected in advance.
                 # this is not how we think of the contagion process working, but
                 # it allows us to easily code using principle of deferred decisions
-                paths = nx.shortest_path_length(G, root)
-                depth = paths[parent]
-                probability = np.random.randint(101) / 100
-                is_infected = np.random.randint(101) / 100 <= probability
+                is_infected = np.random.randint(101) / 100 <= G.nodes[child]['p']
                 # a node is only infected if its parent is infected
                 if parent in active_infected_nodes and is_infected:
                     active_infected_nodes.append(child)
@@ -68,8 +66,9 @@ def self_testing_model(
         # if we are past time k, do one step of the contact tracing process
         if t >= k:
             for node in frontier_nodes:
-                r = np.random.randint(101) / 100
-                does_test = np.random.randint(101) / 100 <= r
+                if G.nodes[node]['notified']:
+                    G.nodes[node]['r'] = 0.75
+                does_test = np.random.randint(101) / 100 <= G.nodes[node]['r']
                 # nothing happens if the node does not choose to test itself
                 if does_test:
                     if node in active_infected_nodes:  # if infected (pre-determined)
@@ -81,9 +80,10 @@ def self_testing_model(
                         # it is removed from the frontier
                         frontier_nodes.remove(node)
 
-                        # and all of its children get added to the frontier
+                        # and all of its children get added to the frontier and are notified their parent node is infected
                         for neighbor in G.neighbors(node):
                             frontier_nodes.append(neighbor)
+                            G.nodes[neighbor]['notified'] = True
 
                     else:  # if not infected
                         # otherwise, it is removed from the frontier,
@@ -257,13 +257,13 @@ if __name__ == "__main__":
     Zc = 30
     k = 2  # time at which contact tracing begins
 
-    G, color_map, return_code = self_testing_model(q, Zc, Zt, k)
+    G, color_map, return_code = self_testing_model(Zc, Zt, k)
     pos = graphviz_layout(G, prog="dot")
     nx.draw(G, pos, with_labels=False, node_color=color_map)
     plt.show()
 
     # creating observed probability of containment graph
-    result = np.zeros((101, 101))
+    # result = np.zeros((101, 101))
 
     # for p1 in range(0, 101):
     #     for r1 in range(0, 101):
