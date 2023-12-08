@@ -4,7 +4,7 @@ import numpy as np
 from networkx.drawing.nx_agraph import graphviz_layout
 
 
-def self_testing_model(Zc, Zt, k):
+def self_testing_model(Zc, Zt, k, p, q, distribution):
     # initialize graph
     G = nx.DiGraph()
 
@@ -22,9 +22,9 @@ def self_testing_model(Zc, Zt, k):
 
     # initialize root, and determine its infection status
     root = 0
-    p = np.random.randint(101) / 100
-    q = np.random.randint(101) / 100
-    r = np.random.randint(101) / 100
+    # p = np.random.randint(101) / 100
+    # q = np.random.randint(101) / 100
+    r = distribution.rvs()
     G.add_node(root, p=p, q=q, r=r)
     active_nodes.append(0)
     frontier_nodes.append(0)
@@ -44,9 +44,9 @@ def self_testing_model(Zc, Zt, k):
                 parent = active_nodes[i]
                 child = id
                 id += 1
-                p = np.random.randint(101) / 100
-                q = np.random.randint(101) / 100
-                r = np.random.randint(101) / 100
+                # p = np.random.randint(101) / 100
+                # q = np.random.randint(101) / 100
+                r = distribution.rvs()
                 G.add_node(child, p=p, q=q, r=r)
                 G.add_edge(parent, child)
                 active_nodes.append(child)
