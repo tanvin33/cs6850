@@ -25,7 +25,7 @@ def self_testing_model(Zc, Zt, k):
     p = np.random.randint(101) / 100
     q = np.random.randint(101) / 100
     r = np.random.randint(101) / 100
-    # G.add_node(root, p=p, q=q, r=r, num_tests=0)
+    # G.add_node(root, p=p, q=q, r=r, num_chances=0)
     G.add_node(root, p=p, q=q, r=r, time_since_last=0)
     active_nodes.append(0)
     frontier_nodes.append(0)
@@ -48,7 +48,7 @@ def self_testing_model(Zc, Zt, k):
                 p = np.random.randint(101) / 100
                 q = np.random.randint(101) / 100
                 r = np.random.randint(101) / 100
-                # G.add_node(child, p=p, q=q, r=r, num_tests=0)
+                # G.add_node(child, p=p, q=q, r=r, num_chances=0)
                 G.add_node(child, p=p, q=q, r=r, time_since_last=0)
                 G.add_edge(parent, child)
                 active_nodes.append(child)
@@ -65,14 +65,17 @@ def self_testing_model(Zc, Zt, k):
         # if we are past time k, do one step of the contact tracing process
         if t >= k:
             for node in frontier_nodes:
-                if G.nodes[node]['time_since_last'] <= 3:
+                # if G.nodes[node]['num_chances'] >= 5:
+                #     does_test = False
+                # else:
+                #     does_test = np.random.randint(101) / 100 <= G.nodes[node]["r"]
+                if G.nodes[node]['time_since_last'] >= 2 or t == k:
+                    does_test = np.random.randint(101) / 100 <= G.nodes[node]["r"]
+                    G.nodes[node]['time_since_last'] = 0
+                else:
                     does_test = False
-                    G.nodes[node]['time_since_last'] += 1
-                does_test = np.random.randint(101) / 100 <= G.nodes[node]["r"]
                 # nothing happens if the node does not choose to test itself
                 if does_test:
-                    # G.nodes[node]['num_tests] += 1
-                    G.nodes[node]['time_since_last'] = 0
                     if node in active_infected_nodes:  # if infected (pre-determined)
                         # first, the node is stabilized
                         active_nodes.remove(node)
@@ -93,8 +96,10 @@ def self_testing_model(Zc, Zt, k):
                         frontier_nodes.remove(node)
                         uninfected_nodes.append(node)
                         active_nodes.remove(node)
-                # if G.nodes[node]['num_tests'] == 5:
-                #     frontier_nodes.remove(node)
+                else:
+                    G.nodes[node]['time_since_last'] += 1
+                # else:
+                #     G.nodes[node]['num_chances'] += 1
         # after a round, calculate num_infected, to check contagion stopping condition
         num_infected = len(active_infected_nodes)
 
