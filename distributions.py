@@ -11,10 +11,12 @@ if __name__ == "__main__":
   distributions = {
       "uniform": stats.uniform(),
       "normal": stats.skewnorm(0),
-      "pos-skew": stats.skewnorm(4),
-      "neg-skew": stats.skewnorm(-4),
-      "lognorm": stats.lognorm(0.3)
+      "pos-skew": stats.skewnorm(1),
+      "neg-skew": stats.skewnorm(-1),
+      "lognorm": stats.lognorm(0.39)
   }
+
+  result = np.zeros((101,101))
 
   # for distr_name in distributions:
   #       print(distr_name)
@@ -57,5 +59,5 @@ if __name__ == "__main__":
   ax.set_ylabel('Average Probability')
   ax.set_xlabel('Distribution')
   ax.set_title('Average Probability of Containment per Distribution')
-  plt.show()
+  plt.savefig("distributions/avgprobs.png")
   
