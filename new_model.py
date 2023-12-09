@@ -2,6 +2,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from networkx.drawing.nx_agraph import graphviz_layout
+import pickle
+import time
+import seaborn as sns
 
 
 def self_testing_model(Zc, Zt, k):
@@ -191,8 +194,9 @@ def self_testing_model_constant(
                 # this is not how we think of the contagion process working, but
                 # it allows us to easily code using principle of deferred decisions
                 paths = nx.shortest_path_length(G, root)
-                depth = paths[parent]
-                probability = p**depth
+                # depth = paths[parent]
+                # probability = p**depth
+                probability = p
                 is_infected = np.random.randint(101) / 100 <= probability
                 # a node is only infected if its parent is infected
                 if parent in active_infected_nodes and is_infected:
@@ -224,7 +228,6 @@ def self_testing_model_constant(
                         # and no longer active (technically still generates new contacts, but we are not interested in them)
                         frontier_nodes.remove(node)
                         uninfected_nodes.append(node)
-                        active_nodes.remove(node)
                         active_nodes.remove(node)
 
         # after a round, calculate num_infected, to check contagion stopping condition
@@ -259,38 +262,72 @@ def self_testing_model_constant(
 
 
 if __name__ == "__main__":
-    p = np.random.randint(101) / 100.0
-    q = 1
-    r = 0.8
+    # p = np.random.randint(101) / 100.0
+    # q = 1
+    # r = 0.8
     Zt = 1500
     Zc = 30
     k = 2  # time at which contact tracing begins
 
-    G, color_map, return_code = self_testing_model(Zc, Zt, k)
-    pos = graphviz_layout(G, prog="dot")
-    nx.draw(G, pos, with_labels=False, node_color=color_map)
-    plt.show()
-
-    # creating observed probability of containment graph
-    # result = np.zeros((101, 101))
-
-    # for p1 in range(0, 101):
-    #     for r1 in range(0, 101):
-    #         num_contained = 0
-    #         for i in range(10):
-    #             G, color_map, return_code = self_testing_model_constant(p1 / 100.0, q, r1 / 100.0, Zc, Zt, k)
-    #             if return_code == 2:
-    #                 num_contained += 1
-    #         result[p1, r1] = num_contained / 100.0
-
-    # fig, ax = plt.subplots()
-    # ax.set(xlim=(0, 100), ylim=(0, 100))
-    # im = ax.imshow(result, cmap="YlGn", interpolation="nearest")
-    # cbar = ax.figure.colorbar(im, ax=ax)
+    # G, color_map, return_code = self_testing_model(Zc, Zt, k)
+    # pos = graphviz_layout(G, prog="dot")
+    # nx.draw(G, pos, with_labels=False, node_color=color_map)
     # plt.show()
 
-    # sum_max_infected = 0
-    # for i in range(0, 1001):
-    #     G, color_map, max_infected = self_testing_model(p, q, r, Zc, Zt, k)
-    #     sum_max_infected += max_infected
-    # print(sum_max_infected / 1000.0)
+    # creating observed probability of containment graph
+    #    result = dict()
+    qs = [0.0, 0.25, 0.5, 0.75, 1.0]
+    # for q in qs:
+    #     print("starting q:", q)
+    #     inner_result = np.zeros((101, 101))
+    #     start = time.time()
+    #     for p in range(0, 101):
+    #         for r in range(0, 101):
+    #             num_contained = 0
+    #             print("starting run p,r: ", p, r)
+    #             for i in range(100):
+    #                 (G, color_map, return_code) = self_testing_model_constant(
+    #                     p / 100.0, q, r / 100.0, Zc, Zt, k
+    #                 )
+    #                 if return_code == 2:
+    #                     num_contained += 1
+    #                 inner_result[p, r] = num_contained / 100.0
+    #     end = time.time()
+    #     print("100 runs time: ", end - start)
+    #     # result[q] = inner_result
+
+    #     fname = "constant_distribution_q_" + str(q) + ".pickle"
+    #     with open(
+    #         fname,
+    #         "wb",
+    #     ) as f:
+    #         pickle.dump(inner_result, f)
+
+    for q in qs:
+        fname = "constant_distribution_q_" + str(q) + ".pickle"
+        with open(
+            fname,
+            "rb",
+        ) as f:
+            inner_result = pickle.load(f)
+
+        fig, ax = plt.subplots()
+        ax.set(xlim=(0, 100), ylim=(0, 100))
+        print(inner_result.shape)
+        im = ax.imshow(inner_result, cmap="YlGn", interpolation="nearest")
+
+        # to use seaborn
+        # ax = sns.heatmap(inner_result, linewidth=0.5, cmap="YlGn")
+        # ax.invert_yaxis()
+        # ax.tick_params(axis="x", labelrotation=0)
+
+        ax.set_xticks([0, 20, 40, 60, 80, 100])
+        ax.set_xticklabels([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        ax.set_yticks([0, 20, 40, 60, 80, 100])
+        ax.set_yticklabels([0.0, 0.2, 0.4, 0.6, 0.8, 1.0])
+        cbar = ax.figure.colorbar(im, ax=ax)
+        plt.title("Probabilty of Containment with q=" + str(q))
+        plt.xlabel("r")
+        plt.ylabel("p")
+        plt.savefig("constant__distribution_q_" + str(q) + ".png")
+        plt.close()
